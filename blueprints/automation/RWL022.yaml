@@ -4,7 +4,7 @@ blueprint:
     Control lights with a Philips Hue Dimmer Switch v2.
 
   domain: automation
-  #   source_url: https://gist.github.com/kwasmich/
+  source_url: https://raw.githubusercontent.com/kwasmich/home-assistant/refs/heads/main/blueprints/automation/RWL022.yaml
 
   input:
     remote:

@@ -4,7 +4,7 @@ blueprint:
     Control devices with a Philips Hue Wall Switch.
 
   domain: automation
-  #   source_url: https://gist.github.com/kwasmich/
+  source_url: https://raw.githubusercontent.com/kwasmich/home-assistant/refs/heads/main/blueprints/automation/RDM00x.yaml
 
   # Define the inputs for the blueprint
   input:
