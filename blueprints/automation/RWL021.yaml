@@ -1,0 +1,299 @@
+blueprint:
+  name: Philips Hue Dimmer Switch v1 (ZHA)
+  description: |
+    Control lights with a Philips Hue Dimmer Switch v1.
+
+  domain: automation
+  #   source_url: https://gist.github.com/kwasmich/
+
+  input:
+    remote:
+      name: Philips Hue Dimmer Switch v1
+      description: Pick RWL021
+      selector:
+        device:
+          filter:
+            - integration: zha
+              manufacturer: Philips
+              model: RWL021
+          entity:
+            - domain:
+                - sensor
+              device_class:
+                - battery
+          multiple: false
+
+    light:
+      name: The light(s) to control
+      description: >
+        The light entity to control brightness
+        (only a single entity is supported; use light groups when needed)
+      selector:
+        entity:
+          domain: light
+
+    button_on_single:
+      name: On button - Press
+      description: Action to run when single pressing the on button
+      default: []
+      selector:
+        action:
+
+    scene_1:
+      name: Scene 1
+      description: Action to run when activating Scene 1
+      default: []
+      selector:
+        action:
+
+    scene_2:
+      name: Scene 2
+      description: Action to run when activating Scene 2
+      default: []
+      selector:
+        action:
+
+    scene_3:
+      name: Scene 3
+      description: Action to run when activating Scene 3
+      default: []
+      selector:
+        action:
+
+    scene_4:
+      name: Scene 4
+      description: Action to run when activating Scene 4
+      default: []
+      selector:
+        action:
+
+    scene_5:
+      name: Scene 5
+      description: Action to run when activating Scene 5
+      default: []
+      selector:
+        action:
+
+mode: single
+
+variables:
+  light: !input "light"
+  button_on_single: !input button_on_single
+  min_brightness: 2
+  timeout_s: 3
+
+triggers:
+  - device_id: !input "remote"
+    domain: zha
+    type: remote_button_short_press
+    subtype: turn_on
+    trigger: device
+    id: on_short_press
+
+  - device_id: !input "remote"
+    domain: zha
+    type: remote_button_short_press
+    subtype: dim_up
+    trigger: device
+    id: dim_up_short_press
+
+  - device_id: !input "remote"
+    domain: zha
+    type: remote_button_long_press
+    subtype: dim_up
+    trigger: device
+    id: dim_up_long_press
+
+  - device_id: !input "remote"
+    domain: zha
+    type: remote_button_short_press
+    subtype: dim_down
+    trigger: device
+    id: dim_down_short_press
+
+  - device_id: !input "remote"
+    domain: zha
+    type: remote_button_long_press
+    subtype: dim_down
+    trigger: device
+    id: dim_down_long_press
+
+  - device_id: !input "remote"
+    domain: zha
+    type: remote_button_short_press
+    subtype: turn_off
+    trigger: device
+    id: off_short_press
+
+actions:
+  - variables:
+      fin: false
+      scene: 0
+      lights_on: "{{ expand(light) | selectattr('state', 'eq', 'on') | map(attribute='entity_id') | list }}"
+      cur_brightness: "{{ state_attr(light, 'brightness') | int(default=0) }}"
+
+  - choose:
+      - conditions:
+          - condition: trigger
+            id: on_short_press
+        sequence:
+          - if:
+              - condition: light.is_off
+                target:
+                  entity_id: !input "light"
+            then:
+              - if:
+                  - condition: template
+                    value_template: '{{ button_on_single | length > 0 }}'
+                then: !input button_on_single
+                else:
+                  - action: light.turn_on
+                    target:
+                      entity_id: !input "light"
+                    data:
+                      transition: 0.2
+            else:
+              - repeat:
+                  while:
+                    - condition: template
+                      value_template: '{{ not fin}}'
+                  sequence:
+                    - variables:
+                        scene: '{{ scene + 1 }}'
+                    - parallel:
+                        - choose:
+                            - conditions:
+                                - condition: template
+                                  value_template: '{{ scene == 1 }}'
+                              sequence: !input scene_1
+                            - conditions:
+                                - condition: template
+                                  value_template: '{{ scene == 2 }}'
+                              sequence: !input scene_2
+                            - conditions:
+                                - condition: template
+                                  value_template: '{{ scene == 3 }}'
+                              sequence: !input scene_3
+                            - conditions:
+                                - condition: template
+                                  value_template: '{{ scene == 4 }}'
+                              sequence: !input scene_4
+                            - conditions:
+                                - condition: template
+                                  value_template: '{{ scene == 5 }}'
+                              sequence: !input scene_5
+                        - sequence:
+                            - wait_for_trigger:
+                                - device_id: !input "remote"
+                                  domain: zha
+                                  type: remote_button_short_press
+                                  subtype: turn_on
+                                  trigger: device
+                                  # id: on_pressed
+                              timeout:
+                                seconds: "{{ timeout_s }}"
+                            - variables:
+                                fin: '{{ not wait.completed }}'
+                                # fin: '{{ wait.trigger.id != "on_pressed" }}'
+
+      - conditions:
+          - condition: trigger
+            id: dim_up_short_press
+        sequence:
+          - action: light.turn_on
+            target:
+              entity_id: "{{ lights_on }}"
+            data:
+              brightness: "{{ min(255, cur_brightness + 32) }}"
+              transition: 0.2
+
+      - conditions:
+          - condition: trigger
+            id: dim_up_long_press
+        sequence:
+          - parallel:
+              - repeat:
+                  while:
+                    - condition: template
+                      value_template: '{{ not fin }}'
+                  sequence:
+                    - variables:
+                        cur_brightness: "{{ cur_brightness + 16 }}"
+                    - action: light.turn_on
+                      target:
+                        entity_id: "{{ lights_on }}"
+                      data:
+                        brightness: "{{ min(255, cur_brightness) }}"
+                        transition: 0.3
+              - sequence:
+                - wait_for_trigger:
+                    - device_id: !input "remote"
+                      domain: zha
+                      type: remote_button_long_release
+                      subtype: dim_up
+                      trigger: device
+                    - device_id: !input "remote"
+                      domain: zha
+                      type: remote_button_short_release
+                      subtype: dim_up
+                      trigger: device
+                  timeout:
+                    seconds: 5
+                - variables:
+                    fin: true
+      
+      - conditions:
+          - condition: trigger
+            id: dim_down_short_press
+        sequence:
+          - action: light.turn_on
+            target:
+              entity_id: "{{ lights_on }}"
+            data:
+              brightness: "{{ max(min_brightness, cur_brightness - 32) }}"
+              transition: 0.2
+      
+      - conditions:
+          - condition: trigger
+            id: dim_down_long_press
+        sequence:
+          - parallel:
+              - repeat:
+                  while:
+                    - condition: template
+                      value_template: '{{ not fin }}'
+                  sequence:
+                    - variables:
+                        cur_brightness: "{{ cur_brightness - 16 }}"
+                    - action: light.turn_on
+                      target:
+                        entity_id: "{{ lights_on }}"
+                      data:
+                        brightness: "{{ max(min_brightness, cur_brightness) }}"
+                        transition: 0.3
+              - sequence:
+                - wait_for_trigger:
+                    - device_id: !input "remote"
+                      domain: zha
+                      type: remote_button_long_release
+                      subtype: dim_down
+                      trigger: device
+                    - device_id: !input "remote"
+                      domain: zha
+                      type: remote_button_short_release
+                      subtype: dim_down
+                      trigger: device
+                  timeout:
+                    seconds: 5
+                - variables:
+                    fin: true
+      
+      - conditions:
+          - condition: trigger
+            id: off_short_press
+        sequence:
+          - action: light.turn_off
+            target:
+              entity_id: !input "light"
+            data:
+              transition: 0.2
