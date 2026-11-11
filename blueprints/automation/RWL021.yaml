@@ -6,6 +6,7 @@ blueprint:
   domain: automation
   source_url: https://raw.githubusercontent.com/kwasmich/home-assistant/refs/heads/main/blueprints/automation/RWL021.yaml
 
+
   input:
     remote:
       name: Philips Hue Dimmer Switch v1
@@ -74,13 +75,16 @@ blueprint:
       selector:
         action:
 
+
 mode: single
+
 
 variables:
   light: !input "light"
   button_on_single: !input button_on_single
   min_brightness: 2
   timeout_s: 3
+
 
 triggers:
   - device_id: !input "remote"
@@ -125,6 +129,7 @@ triggers:
     trigger: device
     id: off_short_press
 
+
 actions:
   - variables:
       fin: false
@@ -156,7 +161,7 @@ actions:
               - repeat:
                   while:
                     - condition: template
-                      value_template: '{{ not fin}}'
+                      value_template: '{{ not fin }}'
                   sequence:
                     - variables:
                         scene: '{{ scene + 1 }}'
@@ -182,6 +187,8 @@ actions:
                                 - condition: template
                                   value_template: '{{ scene == 5 }}'
                               sequence: !input scene_5
+                          default:
+                            - stop: 'End of Scenes'
                         - sequence:
                             - wait_for_trigger:
                                 - device_id: !input "remote"
@@ -189,12 +196,10 @@ actions:
                                   type: remote_button_short_press
                                   subtype: turn_on
                                   trigger: device
-                                  # id: on_pressed
                               timeout:
                                 seconds: "{{ timeout_s }}"
                             - variables:
                                 fin: '{{ not wait.completed }}'
-                                # fin: '{{ wait.trigger.id != "on_pressed" }}'
 
       - conditions:
           - condition: trigger
