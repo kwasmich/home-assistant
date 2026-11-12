@@ -7,6 +7,10 @@ blueprint:
   source_url: https://raw.githubusercontent.com/kwasmich/home-assistant/refs/heads/main/blueprints/automation/RDM001.yaml
 
 
+  trace:
+    stored_traces: 20
+
+
   input:
     remote:
       name: Philips Hue Wall Switch
