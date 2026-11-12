@@ -7,10 +7,6 @@ blueprint:
   source_url: https://raw.githubusercontent.com/kwasmich/home-assistant/refs/heads/main/blueprints/automation/RWL022.yaml
 
 
-  trace:
-    stored_traces: 20
-
-
   input:
     remote:
       name: Philips Hue Dimmer Switch v2
@@ -81,6 +77,10 @@ blueprint:
 
 
 mode: single
+
+
+trace:
+  stored_traces: 20
 
 
 variables:
